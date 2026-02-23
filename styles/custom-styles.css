@@ -1,0 +1,8 @@
+/* VK Custom — минимальный базовый CSS */
+/* Не трогаем глобальные стили, только подготовка */
+
+.im-page,
+.im-page--body,
+.im-page--chat-body {
+    transition: background .2s;
+}

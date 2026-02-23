@@ -1,0 +1,9 @@
+/* Темная тема для ВК */
+.vk-custom-dark {
+    filter: invert(90%) hue-rotate(180deg);
+}
+
+.vk-custom-dark img,
+.vk-custom-dark video {
+    filter: invert(100%) hue-rotate(180deg);
+}

@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <style>
+        body {
+            width: 400px;
+            padding: 15px;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f5f5f5;
+        }
+        .container {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        h2 {
+            margin: 0 0 10px 0;
+            color: #4a76a8;
+            font-size: 20px;
+            text-align: center;
+        }
+        .section {
+            background: white;
+            border-radius: 8px;
+            padding: 15px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .section h3 {
+            margin: 0 0 10px 0;
+            font-size: 16px;
+            color: #333;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        label {
+            display: block;
+            margin: 8px 0 4px;
+            font-size: 13px;
+            color: #666;
+            font-weight: 500;
+        }
+        select, input[type="text"], input[type="color"] {
+            width: 100%;
+            padding: 8px 10px;
+            margin: 5px 0;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+            font-size: 13px;
+        }
+        input[type="range"] {
+            width: 100%;
+            margin: 5px 0;
+        }
+        button {
+            background: #4a76a8;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: background 0.2s;
+            width: 100%;
+        }
+        button:hover {
+            background: #5a86b8;
+        }
+        button.danger {
+            background: #dc3545;
+        }
+        button.danger:hover {
+            background: #c82333;
+        }
+        button.secondary {
+            background: #6c757d;
+        }
+        button.secondary:hover {
+            background: #5a6268;
+        }
+        .note {
+            font-size: 11px;
+            color: #888;
+            margin-top: 4px;
+        }
+        .gif-gallery {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 8px;
+            margin-top: 10px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .gif-item {
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 6px;
+            cursor: pointer;
+            text-align: center;
+            transition: all 0.2s;
+            border: 1px solid #dee2e6;
+            font-size: 12px;
+        }
+        .gif-item:hover {
+            background: #e9ecef;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        .gif-item.selected {
+            background: #4a76a8;
+            color: white;
+            border-color: #4a76a8;
+        }
+        .status {
+            margin: 10px 0;
+            padding: 10px;
+            border-radius: 6px;
+            font-size: 12px;
+            text-align: center;
+            background: #e8f5e9;
+            color: #2e7d32;
+        }
+        .status.warning {
+            background: #fff3e0;
+            color: #f57c00;
+        }
+        .current-bg {
+            margin-top: 10px;
+            padding: 10px;
+            background: #f8f9fa;
+            border-radius: 4px;
+        }
+        .flex-row {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+        .flex-row button {
+            width: auto;
+            flex-shrink: 0;
+        }
+        hr {
+            margin: 15px 0;
+            border: none;
+            border-top: 1px solid #dee2e6;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>🎨 VK Custom</h2>
+        
+        <div class="status" id="statusMessage">
+            ⚠️ Откройте ВКонтакте для применения тем
+        </div>
+        
+        <div class="section">
+            <h3>🎬 Фоновое видео/GIF</h3>
+            <select id="backgroundType">
+                <option value="none">🚫 Без фона</option>
+                <option value="gifer">🖼️ Gifer (готовые GIF)</option>
+                <option value="gallery">🎨 Галерея GIF</option>
+                <option value="custom">🔗 Своя ссылка</option>
+                <option value="youtube">📺 YouTube видео</option>
+            </select>
+            
+            <!-- Gifer Embed -->
+            <div id="giferSettings" style="display:none; margin-top: 10px;">
+                <label>Вставьте код Gifer или ID видео:</label>
+                <textarea id="giferCode" rows="3" placeholder='&lt;iframe src="https://gifer.com/embed/84OP" ...&gt; или просто 84OP' style="width:100%; padding:8px; border:1px solid #ddd; border-radius:4px;"></textarea>
+                <div class="note">Пример: 84OP или полный iframe код</div>
+                <button id="setGiferBg">Установить Gifer фон</button>
+            </div>
+            
+            <!-- Галерея GIF -->
+            <div id="gifGallery" style="display:none; margin-top: 10px;">
+                <label>Популярные GIF:</label>
+                <div class="gif-gallery">
+                    <div class="gif-item" data-url="84OP" data-type="gifer">🌌 Космос</div>
+                    <div class="gif-item" data-url="7VE" data-type="gifer">✨ Звезды</div>
+                    <div class="gif-item" data-url="3Q7t" data-type="gifer">🌧️ Дождь</div>
+                    <div class="gif-item" data-url="YCZH" data-type="gifer">🤖 Киберпанк</div>
+                    <div class="gif-item" data-url="9W5" data-type="gifer">🔥 Огонь</div>
+                    <div class="gif-item" data-url="IVd4Kj" data-type="gifer">🌊 Волны</div>
+                    <div class="gif-item" data-url="K8Zb" data-type="gifer">🌠 Падающие звезды</div>
+                    <div class="gif-item" data-url="UoPp" data-type="gifer">🍃 Листья</div>
+                    <div class="gif-item" data-url="https://i.gifer.com/7VE.gif" data-type="direct">🌌 Космос (прямая)</div>
+                    <div class="gif-item" data-url="https://i.gifer.com/3Q7t.gif" data-type="direct">🌧️ Дождь (прямая)</div>
+                </div>
+                <div class="note">Кликните по GIF для установки</div>
+            </div>
+            
+            <!-- Своя ссылка -->
+            <div id="customUrlSettings" style="display:none; margin-top: 10px;">
+                <label>URL видео или GIF:</label>
+                <input type="text" id="mediaUrl" placeholder="https://example.com/animation.gif">
+                <div class="note">Поддерживаются: .gif, .mp4, .webm, YouTube ссылки</div>
+                <button id="setCustomMedia">Установить</button>
+            </div>
+            
+            <!-- YouTube -->
+            <div id="youtubeSettings" style="display:none; margin-top: 10px;">
+                <label>YouTube ссылка:</label>
+                <input type="text" id="youtubeUrl" placeholder="https://youtu.be/... или https://youtube.com/watch?v=...">
+                <div class="note">Видео будет без звука и зациклено</div>
+                <button id="setYoutube">Установить YouTube фон</button>
+            </div>
+            
+            <!-- Текущий фон -->
+            <div id="currentBackground" class="current-bg" style="display:none;">
+                <label>Текущий фон:</label>
+                <div class="flex-row">
+                    <input type="text" id="currentBgUrl" readonly style="flex:1; background:#f0f0f0;">
+                    <button id="removeBg" class="danger" style="width:auto;">✕</button>
+                </div>
+            </div>
+        </div>
+        
+        <div class="section">
+            <h3>🌙 Тема оформления</h3>
+            <select id="themeSelect">
+                <option value="dark">Темная тема</option>
+                <option value="light">Светлая тема</option>
+            </select>
+        </div>
+        
+        <div class="section">
+            <h3>🎨 Цветовая схема</h3>
+            <label>Основной фон:</label>
+            <input type="color" id="bgColor" value="#1e1e1e">
+            <label>Акцентный цвет:</label>
+            <input type="color" id="accentColor" value="#4a76a8">
+        </div>
+        
+        <div class="section">
+            <h3>⚪ Скругление углов</h3>
+            <input type="range" id="borderRadius" min="0" max="20" value="8">
+            <div style="display: flex; justify-content: space-between;">
+                <span>0px</span>
+                <span id="borderRadiusValue">8px</span>
+                <span>20px</span>
+            </div>
+        </div>
+        
+        <div class="section">
+            <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                <input type="checkbox" id="showVisualizer" style="width: auto;"> 
+                🎵 Показывать визуализатор музыки
+            </label>
+            <div class="note">Анимированный эквалайзер в такт музыке</div>
+        </div>
+        
+        <button id="saveSettings">💾 Сохранить все настройки</button>
+        <button id="resetSettings" class="secondary" style="margin-top: 5px;">↺ Сбросить настройки</button>
+    </div>
+    
+    <script src="popup.js"></script>
+</body>
+</html>
