@@ -3,7 +3,9 @@ if (window.__vkc5) throw new Error('Loaded');
 window.__vkc5 = true;
 
 let S = {
-    bg: 'https://gifer.com/embed/C3Jb',
+    bg: 'https://giphy.com/gifs/xbox-game-xbox-series-x-s-MjCG7Gi48SDGwooctb',
+    bgType: 'gif',
+    bgUrl: '',
     accent: '#4a76a8',
     radius: '12px',
     overlay: 40,
@@ -45,17 +47,75 @@ const rgba = (hex, pct) => {
     return `rgba(${r},${g},${b},${pct/100})`;
 };
 
-const gifId = (s) => {
-    s = s.trim();
-    let m = s.match(/gifer\.com\/embed\/([a-zA-Z0-9]+)/);
-    if (m) return m[1];
-    m = s.match(/gifer\.com\/\w+\/([a-zA-Z0-9]+)/);
-    if (m) return m[1];
-    m = s.match(/gifer\.com\/([a-zA-Z0-9]+)/);
-    if (m && m[1] !== 'embed') return m[1];
-    if (/^[a-zA-Z0-9]+$/.test(s)) return s;
+function parseBgInput(input) {
+    if (!input) return null;
+    input = input.trim();
+    if (!input) return null;
+
+    let m;
+
+    m = input.match(/giphy\.com\/(?:gifs|media|embed|stickers)\/(?:.*-)?([a-zA-Z0-9]+)\/?$/);
+    if (m) return { type: 'gif', url: `https://i.giphy.com/media/${m[1]}/giphy.webp` };
+
+    m = input.match(/(?:media\d*|i)\.giphy\.com\/media\/([a-zA-Z0-9]+)\//);
+    if (m) return { type: 'gif', url: `https://i.giphy.com/media/${m[1]}/giphy.webp` };
+
+    m = input.match(/i\.giphy\.com\/([a-zA-Z0-9]+)\.\w+/);
+    if (m) return { type: 'gif', url: `https://i.giphy.com/media/${m[1]}/giphy.webp` };
+
+    m = input.match(/tenor\.com\/(?:view|embed)\/[^\s]*?-(\d+)\/?$/);
+    if (m) return { type: 'iframe', url: `https://tenor.com/embed/${m[1]}` };
+
+    m = input.match(/(https?:\/\/media\.tenor\.com\/[^\s]+\.(?:gif|mp4|webm))/i);
+    if (m) {
+        const ext = m[1].split('.').pop().toLowerCase();
+        if (ext === 'mp4' || ext === 'webm') return { type: 'video', url: m[1] };
+        return { type: 'gif', url: m[1] };
+    }
+
+    m = input.match(/(https?:\/\/c\.tenor\.com\/[^\s]+)/i);
+    if (m) return { type: 'gif', url: m[1] };
+
+    m = input.match(/i\.imgur\.com\/([a-zA-Z0-9]+)\.(\w+)/);
+    if (m) {
+        const ext = m[2].toLowerCase();
+        if (ext === 'mp4' || ext === 'webm') return { type: 'video', url: input };
+        return { type: 'gif', url: input };
+    }
+    m = input.match(/imgur\.com\/(?:a\/)?([a-zA-Z0-9]+)\/?$/);
+    if (m) return { type: 'gif', url: `https://i.imgur.com/${m[1]}.gif` };
+
+    m = input.match(/gifer\.com\/embed\/([a-zA-Z0-9]+)/);
+    if (m) return { type: 'iframe', url: `https://gifer.com/embed/${m[1]}` };
+    m = input.match(/gifer\.com\/\w+\/([a-zA-Z0-9]+)/);
+    if (m) return { type: 'iframe', url: `https://gifer.com/embed/${m[1]}` };
+    m = input.match(/gifer\.com\/([a-zA-Z0-9]+)\/?$/);
+    if (m && m[1] !== 'embed') return { type: 'iframe', url: `https://gifer.com/embed/${m[1]}` };
+
+    m = input.match(/pinterest\.\w+\/pin\/(\d+)/);
+    if (m) return { type: 'iframe', url: input };
+
+    if (/\.(gif|webp|png|jpg|jpeg|svg|avif)(\?[^\s]*)?$/i.test(input)) {
+        return { type: 'gif', url: input };
+    }
+
+    if (/\.(mp4|webm|ogg)(\?[^\s]*)?$/i.test(input)) {
+        return { type: 'video', url: input };
+    }
+
+    m = input.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([a-zA-Z0-9_-]+)/);
+    if (m) return { type: 'iframe', url: `https://www.youtube.com/embed/${m[1]}?autoplay=1&mute=1&loop=1&playlist=${m[1]}&controls=0&showinfo=0&rel=0&modestbranding=1` };
+
+    if (input.startsWith('http://') || input.startsWith('https://')) {
+        return { type: 'iframe', url: input };
+    }
+
+    if (/^[a-zA-Z0-9]+$/.test(input)) {
+        return { type: 'iframe', url: `https://gifer.com/embed/${input}` };
+    }
+
     return null;
-};
+}
 
 const CLOCK_FONTS = {
     'default': '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
@@ -602,18 +662,52 @@ function paint(el, color) {
     el.style.setProperty('background-image', 'none', 'important');
 }
 
-function setBg(url) {
+function setBg(input) {
     rmBg();
+
+    const parsed = parseBgInput(input);
+    if (!parsed) return;
+
     const c = document.createElement('div');
     c.id = 'vk-bg';
     c.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;z-index:-2;overflow:hidden;pointer-events:none';
-    const f = document.createElement('iframe');
-    f.src = url;
-    f.style.cssText = 'position:absolute;top:50%;left:50%;min-width:100vw;min-height:100vh;width:177.78vh;height:56.25vw;transform:translate(-50%,-50%);border:none;pointer-events:none';
-    f.allow = 'autoplay;fullscreen';
-    f.setAttribute('frameborder','0');
-    c.appendChild(f);
+
+    if (parsed.type === 'gif') {
+        const img = document.createElement('img');
+        img.src = parsed.url;
+        img.crossOrigin = 'anonymous';
+        img.style.cssText = 'position:absolute;top:0;left:0;width:100%;height:100%;object-fit:cover;pointer-events:none';
+        img.onerror = () => {
+            img.remove();
+            const f = document.createElement('iframe');
+            f.src = parsed.url;
+            f.style.cssText = 'position:absolute;top:50%;left:50%;min-width:100vw;min-height:100vh;width:177.78vh;height:56.25vw;transform:translate(-50%,-50%);border:none;pointer-events:none';
+            f.allow = 'autoplay;fullscreen';
+            f.setAttribute('frameborder','0');
+            c.appendChild(f);
+        };
+        c.appendChild(img);
+    } else if (parsed.type === 'video') {
+        const vid = document.createElement('video');
+        vid.src = parsed.url;
+        vid.autoplay = true;
+        vid.loop = true;
+        vid.muted = true;
+        vid.playsInline = true;
+        vid.crossOrigin = 'anonymous';
+        vid.style.cssText = 'position:absolute;top:0;left:0;width:100%;height:100%;object-fit:cover;pointer-events:none';
+        c.appendChild(vid);
+    } else {
+        const f = document.createElement('iframe');
+        f.src = parsed.url;
+        f.style.cssText = 'position:absolute;top:50%;left:50%;min-width:100vw;min-height:100vh;width:177.78vh;height:56.25vw;transform:translate(-50%,-50%);border:none;pointer-events:none';
+        f.allow = 'autoplay;fullscreen';
+        f.setAttribute('frameborder','0');
+        c.appendChild(f);
+    }
+
     document.body.prepend(c);
+
     const o = document.createElement('div');
     o.id = 'vk-overlay';
     o.style.cssText = `position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,${S.overlay/100});z-index:-1;pointer-events:none;transition:background .3s`;
@@ -670,7 +764,7 @@ function makePanel() {
 }
 
 function fillPanel(p) {
-    const g = S.bg ? (S.bg.split('/embed/')[1] || 'C3Jb') : 'C3Jb';
+    const bgDisplay = S.bg || '';
     p.innerHTML = `
 <div style="display:flex;align-items:center;gap:8px;padding:14px 14px 10px;border-bottom:1px solid rgba(255,255,255,.05);flex-shrink:0">
     <span style="font-size:20px">🎨</span>
@@ -679,7 +773,12 @@ function fillPanel(p) {
 </div>
 <div style="flex:1;overflow-y:auto;padding:6px;scrollbar-width:thin">
 ${grp('🖼️ Фон',`
-    <textarea id="vk-gif" rows="2" style="${IS};resize:vertical">${g}</textarea>
+    <textarea id="vk-gif" rows="3" placeholder="Вставь ссылку на GIF/видео..." style="${IS};resize:vertical;font-size:10px">${bgDisplay}</textarea>
+    <div style="font-size:9px;color:#555;padding:4px 7px;background:rgba(255,255,255,.02);border-radius:5px;border-left:2px solid rgba(74,118,168,.2);margin:4px 0 6px">
+        Giphy · Tenor · Gifer · Imgur<br>
+        Прямые .gif .webp .mp4 .webm<br>
+        YouTube (видео-фон)
+    </div>
     ${BT('vk-set-gif','🖼️ Установить','#4a76a8')}
     ${BT('vk-rm-bg','🗑️ Убрать','#dc3545')}
 `)}
@@ -781,7 +880,7 @@ function bindPanel(p) {
     });
 
     p.querySelectorAll('input[type=checkbox]').forEach(cb => {
-        cb.addEventListener('change', (e) => {
+        cb.addEventListener('change', () => {
             const label = cb.closest('label');
             if (label) {
                 const bg = label.querySelectorAll('span')[0];
@@ -816,16 +915,38 @@ function bindPanel(p) {
     }
 
     p.querySelector('#vk-set-gif').onclick = () => {
-        const id = gifId(p.querySelector('#vk-gif').value);
-        if(id){S.bg=`https://gifer.com/embed/${id}`;setBg(S.bg);p.querySelector('#vk-gif').value=id;toast(`✅ "${id}" ok`);}
-        else toast('❌ Ошибка');
+        const raw = p.querySelector('#vk-gif').value.trim();
+        if (!raw) { toast('❌ Вставь ссылку'); return; }
+
+        const parsed = parseBgInput(raw);
+        if (parsed) {
+            S.bg = raw;
+            setBg(raw);
+
+            const sourceNames = {
+                'giphy.com': '🎬 Giphy',
+                'tenor.com': '🎬 Tenor',
+                'gifer.com': '🎬 Gifer',
+                'imgur.com': '🖼️ Imgur',
+                'youtube.com': '▶️ YouTube',
+                'youtu.be': '▶️ YouTube'
+            };
+            let sourceName = '✅ Фон';
+            for (const [domain, name] of Object.entries(sourceNames)) {
+                if (raw.includes(domain)) { sourceName = name; break; }
+            }
+            toast(`${sourceName} установлен (${parsed.type})`);
+        } else {
+            toast('❌ Не удалось распознать ссылку');
+        }
     };
-    p.querySelector('#vk-rm-bg').onclick = () => { S.bg=null;rmBg();toast('🗑️ Убрано'); };
-    p.querySelector('#vk-save').onclick = () => { collect();save();toast('💾 Ок!'); };
+
+    p.querySelector('#vk-rm-bg').onclick = () => { S.bg=null;rmBg();save();toast('🗑️ Фон убран'); };
+    p.querySelector('#vk-save').onclick = () => { collect();save();toast('💾 Сохранено!'); };
     p.querySelector('#vk-reset').onclick = () => {
-        if(!confirm('Сбросить?'))return;
-        S={bg:'https://gifer.com/embed/C3Jb',accent:'#4a76a8',radius:'12px',overlay:40,tint:'#000000',chat:10,dialogs:10,header:15,input:20,topbar:10,sidebar:15,panels:30,blocks:85,ownOp:60,otherOp:50,ownClr:'#4a76a8',otherClr:'#2d2d2d',clockOn:true,clockSize:48,clockX:-1,clockY:60,clockColor:'#ffffff',clockBg:30,clockSeconds:true,clockDate:true,clock24h:true,clockFont:'default'};
-        setBg(S.bg);refreshClock();save();fillPanel(document.getElementById('vk-panel'));toast('🔄 Ок');
+        if(!confirm('Сбросить все настройки?'))return;
+        S={bg:'https://giphy.com/gifs/xbox-game-xbox-series-x-s-MjCG7Gi48SDGwooctb',bgType:'gif',bgUrl:'',accent:'#4a76a8',radius:'12px',overlay:40,tint:'#000000',chat:10,dialogs:10,header:15,input:20,topbar:10,sidebar:15,panels:30,blocks:85,ownOp:60,otherOp:50,ownClr:'#4a76a8',otherClr:'#2d2d2d',clockOn:true,clockSize:48,clockX:-1,clockY:60,clockColor:'#ffffff',clockBg:30,clockSeconds:true,clockDate:true,clock24h:true,clockFont:'default'};
+        setBg(S.bg);refreshClock();save();fillPanel(document.getElementById('vk-panel'));toast('🔄 Сброшено');
     };
 }
 
